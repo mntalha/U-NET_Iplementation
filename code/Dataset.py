@@ -24,15 +24,16 @@ class CustomDataset(Dataset):
         
         self.root_dir = root_dir
         
-        images_path = os.path.join(root_dir,"CXR_png")
+        self.images_path = os.path.join(root_dir,"CXR_png")
         
-        masks_path =  os.path.join(root_dir,"masks")
+        self.masks_path =  os.path.join(root_dir,"masks")
         
-        tests_path = os.path.join(root_dir,"test")
+        self.tests_path = os.path.join(root_dir,"test")
         
-        img_list_row = os.listdir(images_path)
+        img_list_row = os.listdir(self.images_path)
 
-        mask_list_row = os.listdir(masks_path)
+        mask_list_row = os.listdir(self.masks_path)
+        
 
   
         for x,i in enumerate(mask_list_row):
@@ -48,12 +49,12 @@ class CustomDataset(Dataset):
                 
         self.image_list = img_list
         
-        self.mask_list = mask_list_row
+        self.mask_list = os.listdir(self.masks_path)
         
-        tests_list = os.listdir(tests_path)
         
-        self.tests_list =tests_list
-               
+        self.tests_list = os.listdir(self.tests_path)
+      
+                
         self.transform = transform
 
         
@@ -64,4 +65,42 @@ class CustomDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
             
-        img_name =
+        img_name =os.path.join(self.images_path,self.image_list[idx])
+        
+        img = io.imread(img_name,as_gray=True)
+        
+        if img.dtype == ('float64'):
+            img = img *255.0
+            img = img.astype(np.uint8)
+
+        mask_name =  os.path.join(self.masks_path,self.mask_list[idx])       
+        
+        mask = io.imread(mask_name)
+        
+        sample = {'image': img, 'mask': mask}
+        
+        if self.transform:
+            sample["image"] = self.transform(sample["image"])
+            sample["mask"] = self.transform(sample["mask"])
+
+        return sample
+        
+def transform_operation( width = 128, height = 128) :
+    import torchvision.transforms as transforms
+    transforms_output = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize([width,height]),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5), (0.5)),
+        ])
+    return transforms_output
+        
+if __name__ == "__main__":
+    
+    train_dataset = CustomDataset(root_dir , transform=(transform_operation(1028,1028)))
+    
+    trainloader = DataLoader(dataset=train_dataset,batch_size=32,num_workers=12, shuffle=False,pin_memory=True)
+    
+
+        
+        
